@@ -6,18 +6,21 @@ import { users } from "@/lib/db/schema";
 import { eq } from "drizzle-orm";
 import bcrypt from "bcryptjs";
 import { AuthError } from "next-auth";
+import { redirect } from "next/navigation";
 
-export async function register(formData: FormData) {
+export type AuthState = { error: string } | undefined;
+
+export async function register(_prevState: AuthState, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
   const name = formData.get("name") as string | null;
 
   if (!email || !password) {
-    return { success: false, error: "Email and password are required" };
+    return { error: "Email and password are required" };
   }
 
   if (password.length < 8) {
-    return { success: false, error: "Password must be at least 8 characters" };
+    return { error: "Password must be at least 8 characters" };
   }
 
   const [existingUser] = await db
@@ -27,7 +30,7 @@ export async function register(formData: FormData) {
     .limit(1);
 
   if (existingUser) {
-    return { success: false, error: "An error occurred while creating your account." };
+    return { error: "An error occurred while creating your account." };
   }
 
   const hashedPassword = await bcrypt.hash(password, 10);
@@ -38,15 +41,15 @@ export async function register(formData: FormData) {
     name: name || null,
   });
 
-  return { success: true };
+  redirect("/login");
 }
 
-export async function login(formData: FormData) {
+export async function login(_prevState: AuthState, formData: FormData) {
   const email = formData.get("email") as string;
   const password = formData.get("password") as string;
 
   if (!email || !password) {
-    return { success: false, error: "Email and password are required" };
+    return { error: "Email and password are required" };
   }
 
   try {
@@ -57,10 +60,8 @@ export async function login(formData: FormData) {
     });
   } catch (error) {
     if (error instanceof AuthError) {
-      return { success: false, error: "Invalid email or password" };
+      return { error: "Invalid email or password" };
     }
     throw error;
   }
-
-  return { success: true };
 }
