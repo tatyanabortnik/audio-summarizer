@@ -1,10 +1,10 @@
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { db } from "@/lib/db";
-import { users } from "@/lib/db/schema";
-import { eq } from "drizzle-orm";
-import bcrypt from "bcryptjs";
+import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { db } from '@/lib/db';
+import { users } from '@/lib/db/schema';
+import { eq } from 'drizzle-orm';
+import bcrypt from 'bcryptjs';
 
 export const {
   handlers: { GET, POST },
@@ -14,22 +14,22 @@ export const {
 } = NextAuth({
   adapter: DrizzleAdapter(db),
   session: {
-    strategy: "jwt", // Use JWT for session management
+    strategy: 'jwt', // Use JWT for session management
   },
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: '/login',
+    error: '/login',
   },
   providers: [
     Credentials({
-      name: "credentials",
+      name: 'credentials',
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       async authorize(credentials) {
         if (!credentials?.email || !credentials?.password) {
-          throw new Error("Email and password are required");
+          return null;
         }
 
         const email = credentials.email as string;
@@ -42,22 +42,15 @@ export const {
           .where(eq(users.email, email))
           .limit(1);
 
-        if (!user) {
-          throw new Error("Invalid email or password");
-        }
-
-        // Check if user has a password (they might have signed up with OAuth)
-        if (!user.password) {
-          throw new Error(
-            "Please sign in with the method you used to create your account"
-          );
+        if (!user || !user.password) {
+          return null;
         }
 
         // Verify password
         const isPasswordValid = await bcrypt.compare(password, user.password);
 
         if (!isPasswordValid) {
-          throw new Error("Invalid email or password");
+          return null;
         }
 
         // Return user object (without password)
