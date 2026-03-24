@@ -22,6 +22,8 @@ A modern web application that enables users to record or upload audio, transcrib
 - **Drizzle ORM** (type-safe, lightweight)
 - **Drizzle Kit** for migrations
 
+- **Zod** for runtime validation
+
 ### Authentication
 
 - **NextAuth.js v5** (Auth.js) with credentials provider
@@ -67,7 +69,6 @@ A modern web application that enables users to record or upload audio, transcrib
 ### Future Additions
 
 - **Inngest** or **Trigger.dev** for background job processing (when needed for large files)
-- **Zod** for runtime validation
 - **React Hook Form** for form management
 
 ---
@@ -118,102 +119,6 @@ A modern web application that enables users to record or upload audio, transcrib
    - Stores summary in database
    - Updates entry status to "completed"
 8. Client redirects to entry view page
-
----
-
-## Database Schema
-
-### Entities and Relationships
-
-```sql
--- Users (managed by NextAuth)
-users
-  - id (uuid, pk)
-  - name (string, nullable)
-  - email (string, unique, not null)
-  - emailVerified (timestamp, nullable)
-  - image (string, nullable)
-  - createdAt (timestamp)
-  - updatedAt (timestamp)
-
-accounts (NextAuth OAuth accounts)
-  - id (uuid, pk)
-  - userId (uuid, fk → users.id)
-  - type (string)
-  - provider (string)
-  - providerAccountId (string)
-  - refresh_token (text, nullable)
-  - access_token (text, nullable)
-  - expires_at (integer, nullable)
-  - token_type (string, nullable)
-  - scope (string, nullable)
-  - id_token (text, nullable)
-  - session_state (string, nullable)
-
-sessions (NextAuth sessions)
-  - id (uuid, pk)
-  - sessionToken (string, unique)
-  - userId (uuid, fk → users.id)
-  - expires (timestamp)
-
--- Core Application Entities
-entries
-  - id (uuid, pk)
-  - userId (uuid, fk → users.id, not null)
-  - title (string, nullable)
-  - audioUrl (string, not null) // Vercel Blob URL
-  - audioFileName (string, not null)
-  - audioFileSize (integer, not null) // bytes
-  - audioDuration (float, nullable) // seconds
-  - mimeType (string, not null)
-  - source (enum: 'upload' | 'recording')
-  - status (enum: 'processing' | 'completed' | 'failed')
-  - processingError (text, nullable)
-  - createdAt (timestamp, default now)
-  - updatedAt (timestamp)
-  - deletedAt (timestamp, nullable) // soft delete
-
-transcripts
-  - id (uuid, pk)
-  - entryId (uuid, fk → entries.id, unique, not null)
-  - fullText (text, not null)
-  - language (string, nullable)
-  - confidence (float, nullable)
-  - wordCount (integer, nullable)
-  - createdAt (timestamp)
-
-transcript_segments
-  - id (uuid, pk)
-  - transcriptId (uuid, fk → transcripts.id, not null)
-  - text (text, not null)
-  - startTime (float, not null) // seconds
-  - endTime (float, not null) // seconds
-  - confidence (float, nullable)
-  - sequenceNumber (integer, not null) // order in transcript
-
-summaries
-  - id (uuid, pk)
-  - entryId (uuid, fk → entries.id, unique, not null)
-  - content (text, not null)
-  - model (string, not null) // e.g., "gpt-3.5-turbo"
-  - createdAt (timestamp)
-
-summary_timestamps
-  - id (uuid, pk)
-  - summaryId (uuid, fk → summaries.id, not null)
-  - text (text, not null) // the summary point
-  - timestamp (float, not null) // seconds - reference point in audio
-  - sequenceNumber (integer, not null) // order in summary
-```
-
-### Indexes
-
-- `entries.userId + entries.createdAt` (for dashboard queries)
-- `entries.status` (for filtering)
-- `transcript_segments.transcriptId + sequenceNumber`
-- `summary_timestamps.summaryId + sequenceNumber`
-
----
 
 ## Folder Structure
 
@@ -369,7 +274,7 @@ audio-summarizer/
 **File**: `src/lib/actions/entries.ts`
 
 ```typescript
-"use server";
+'use server';
 
 // Upload and process audio
 export async function createEntryFromUpload(formData: FormData);
@@ -381,7 +286,7 @@ export async function updateEntryTitle(entryId: string, title: string);
 **File**: `src/lib/actions/transcribe.ts`
 
 ```typescript
-"use server";
+'use server';
 
 export async function transcribeAudio(entryId: string);
 export async function retryTranscription(entryId: string);
@@ -390,7 +295,7 @@ export async function retryTranscription(entryId: string);
 **File**: `src/lib/actions/summarize.ts`
 
 ```typescript
-"use server";
+'use server';
 
 export async function summarizeTranscript(entryId: string);
 export async function regenerateSummary(entryId: string);
@@ -415,8 +320,8 @@ export async function regenerateSummary(entryId: string);
 ```typescript
 // src/lib/services/ai/whisper.ts
 
-import OpenAI from "openai";
-import { put } from "@vercel/blob";
+import OpenAI from 'openai';
+import { put } from '@vercel/blob';
 
 export async function transcribeAudioFile(audioUrl: string) {
   const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
@@ -426,14 +331,14 @@ export async function transcribeAudioFile(audioUrl: string) {
   const audioBlob = await audioResponse.blob();
 
   // 2. Convert to File object for Whisper API
-  const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
+  const file = new File([audioBlob], 'audio.mp3', { type: 'audio/mpeg' });
 
   // 3. Call Whisper API with timestamp_granularities
   const transcription = await openai.audio.transcriptions.create({
     file,
-    model: "whisper-1",
-    response_format: "verbose_json",
-    timestamp_granularities: ["segment"],
+    model: 'whisper-1',
+    response_format: 'verbose_json',
+    timestamp_granularities: ['segment'],
   });
 
   // 4. Parse response
@@ -455,7 +360,7 @@ export async function transcribeAudioFile(audioUrl: string) {
 ```typescript
 // src/lib/services/ai/summarization.ts
 
-import OpenAI from "openai";
+import OpenAI from 'openai';
 
 export async function summarizeTranscript(
   fullText: string,
@@ -470,7 +375,7 @@ You are an expert at summarizing transcripts. Given the following timestamped tr
 2. For each bullet point, include the most relevant timestamp in the format [MM:SS]
 
 Transcript:
-${segments.map((s) => `[${formatTime(s.startTime)}] ${s.text}`).join("\n")}
+${segments.map((s) => `[${formatTime(s.startTime)}] ${s.text}`).join('\n')}
 
 Output format:
 - [00:30] Summary point 1
@@ -480,14 +385,14 @@ Output format:
 
   // 2. Call GPT-3.5-turbo
   const completion = await openai.chat.completions.create({
-    model: "gpt-3.5-turbo",
+    model: 'gpt-3.5-turbo',
     messages: [
       {
-        role: "system",
+        role: 'system',
         content:
-          "You are a helpful assistant that summarizes audio transcripts.",
+          'You are a helpful assistant that summarizes audio transcripts.',
       },
-      { role: "user", content: prompt },
+      { role: 'user', content: prompt },
     ],
     temperature: 0.7,
     max_tokens: 500,
@@ -499,7 +404,7 @@ Output format:
 
   return {
     content: summaryText,
-    model: "gpt-3.5-turbo",
+    model: 'gpt-3.5-turbo',
     timestampedPoints: summaryPoints,
   };
 }
@@ -538,7 +443,7 @@ export async function processAudioEntry(entryId: string) {
     // 1. Update status to processing
     await db
       .update(entries)
-      .set({ status: "processing" })
+      .set({ status: 'processing' })
       .where(eq(entries.id, entryId));
 
     // 2. Get entry with audio URL
@@ -546,7 +451,7 @@ export async function processAudioEntry(entryId: string) {
       where: eq(entries.id, entryId),
     });
 
-    if (!entry) throw new Error("Entry not found");
+    if (!entry) throw new Error('Entry not found');
 
     // 3. Transcribe audio
     const transcriptionResult = await transcribeAudioFile(entry.audioUrl);
@@ -558,7 +463,7 @@ export async function processAudioEntry(entryId: string) {
         entryId,
         fullText: transcriptionResult.fullText,
         language: transcriptionResult.language,
-        wordCount: transcriptionResult.fullText.split(" ").length,
+        wordCount: transcriptionResult.fullText.split(' ').length,
       })
       .returning();
 
@@ -598,7 +503,7 @@ export async function processAudioEntry(entryId: string) {
     await db
       .update(entries)
       .set({
-        status: "completed",
+        status: 'completed',
         audioDuration:
           transcriptionResult.segments[transcriptionResult.segments.length - 1]
             ?.endTime,
@@ -611,7 +516,7 @@ export async function processAudioEntry(entryId: string) {
     await db
       .update(entries)
       .set({
-        status: "failed",
+        status: 'failed',
         processingError: error.message,
       })
       .where(eq(entries.id, entryId));
@@ -695,9 +600,9 @@ export function AudioPlayer({ audioUrl, onTimeUpdate, seekToTime }: AudioPlayerP
 **File**: `src/hooks/use-audio-player.ts`
 
 ```typescript
-"use client";
+'use client';
 
-import { create } from "zustand";
+import { create } from 'zustand';
 
 interface AudioPlayerState {
   currentTime: number;
@@ -817,17 +722,17 @@ export function TimestampLink({ timestamp, className }: TimestampLinkProps) {
 ```typescript
 // src/lib/services/storage/blob-storage.ts
 
-import { put, del } from "@vercel/blob";
+import { put, del } from '@vercel/blob';
 
 export async function uploadAudio(file: File, userId: string) {
   // Generate unique filename
   const timestamp = Date.now();
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
   const filename = `audio/${userId}/${timestamp}-${sanitizedName}`;
 
   // Upload to Vercel Blob
   const blob = await put(filename, file, {
-    access: "public",
+    access: 'public',
     addRandomSuffix: true,
   });
 
@@ -867,20 +772,20 @@ export async function deleteAudio(url: string) {
 **File**: `src/lib/auth/auth.ts`
 
 ```typescript
-import NextAuth from "next-auth";
-import Credentials from "next-auth/providers/credentials";
-import { DrizzleAdapter } from "@auth/drizzle-adapter";
-import { db } from "@/lib/db";
-import bcrypt from "bcryptjs";
+import NextAuth from 'next-auth';
+import Credentials from 'next-auth/providers/credentials';
+import { DrizzleAdapter } from '@auth/drizzle-adapter';
+import { db } from '@/lib/db';
+import bcrypt from 'bcryptjs';
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
-  session: { strategy: "jwt" },
+  session: { strategy: 'jwt' },
   providers: [
     Credentials({
       credentials: {
-        email: { label: "Email", type: "email" },
-        password: { label: "Password", type: "password" },
+        email: { label: 'Email', type: 'email' },
+        password: { label: 'Password', type: 'password' },
       },
       authorize: async (credentials) => {
         // Validate and return user
@@ -900,8 +805,8 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
     }),
   ],
   pages: {
-    signIn: "/login",
-    error: "/login",
+    signIn: '/login',
+    error: '/login',
   },
   callbacks: {
     jwt({ token, user }) {
