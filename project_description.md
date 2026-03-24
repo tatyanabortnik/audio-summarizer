@@ -11,26 +11,31 @@ A modern web application that enables users to record or upload audio, transcrib
 ## Finalized Tech Stack
 
 ### Core Framework
+
 - **Next.js 14+** with App Router (TypeScript)
 - **React 18+** with Server Components and Server Actions
 - **Node.js 18+**
 
 ### Database & ORM
+
 - **Neon PostgreSQL** (serverless, excellent free tier)
 - **Drizzle ORM** (type-safe, lightweight)
 - **Drizzle Kit** for migrations
 
 ### Authentication
+
 - **NextAuth.js v5** (Auth.js) with credentials provider
 - Session management with JWT
 - Protected routes and API endpoints
 
 ### Storage
+
 - **Vercel Blob** for audio file storage
 - Optimized for Vercel deployment
 - Simple SDK integration
 
 ### AI Services
+
 - **OpenAI Whisper API** for transcription
   - Excellent accuracy, ~$0.006/minute
   - Supports 50+ languages
@@ -41,22 +46,26 @@ A modern web application that enables users to record or upload audio, transcrib
   - Can reference specific timestamps
 
 ### UI & Styling
+
 - **Tailwind CSS** for utility-first styling
 - **shadcn/ui** for component library
 - **Radix UI** primitives (via shadcn)
 - Responsive design patterns
 
 ### Audio Processing
+
 - **WaveSurfer.js** for waveform visualization
 - Browser MediaRecorder API for recording
 - Audio playback with seek functionality
 
 ### Deployment & Infrastructure
+
 - **Vercel** for hosting (serverless functions)
 - Edge-ready architecture
 - Environment variable management
 
 ### Future Additions
+
 - **Inngest** or **Trigger.dev** for background job processing (when needed for large files)
 - **Zod** for runtime validation
 - **React Hook Form** for form management
@@ -198,6 +207,7 @@ summary_timestamps
 ```
 
 ### Indexes
+
 - `entries.userId + entries.createdAt` (for dashboard queries)
 - `entries.status` (for filtering)
 - `transcript_segments.transcriptId + sequenceNumber`
@@ -314,6 +324,7 @@ audio-summarizer/
 ## Key User Flows
 
 ### 1. New User Registration & First Entry
+
 1. Visit landing page → Click "Get Started"
 2. Register with email/password
 3. Redirected to dashboard (empty state)
@@ -324,12 +335,14 @@ audio-summarizer/
 8. Click on timestamps to jump in audio
 
 ### 2. Returning User - Browse History
+
 1. Login → Dashboard
 2. See list of past entries with thumbnails/metadata
 3. Filter by date, status, or search by title
 4. Click entry → View full details
 
 ### 3. Audio Recording Flow
+
 1. Navigate to /record
 2. Click "Start Recording"
 3. Browser requests microphone permission
@@ -340,6 +353,7 @@ audio-summarizer/
 8. Processing begins (same as upload flow)
 
 ### 4. Interactive Transcript Navigation
+
 1. On entry page, see audio player with waveform
 2. Below: timestamped transcript segments
 3. Click any segment → Audio seeks to that timestamp
@@ -353,38 +367,43 @@ audio-summarizer/
 ### Server Actions (preferred for mutations)
 
 **File**: `src/lib/actions/entries.ts`
+
 ```typescript
-'use server'
+"use server";
 
 // Upload and process audio
-export async function createEntryFromUpload(formData: FormData)
-export async function createEntryFromRecording(audioBlob: Blob)
-export async function deleteEntry(entryId: string)
-export async function updateEntryTitle(entryId: string, title: string)
+export async function createEntryFromUpload(formData: FormData);
+export async function createEntryFromRecording(audioBlob: Blob);
+export async function deleteEntry(entryId: string);
+export async function updateEntryTitle(entryId: string, title: string);
 ```
 
 **File**: `src/lib/actions/transcribe.ts`
-```typescript
-'use server'
 
-export async function transcribeAudio(entryId: string)
-export async function retryTranscription(entryId: string)
+```typescript
+"use server";
+
+export async function transcribeAudio(entryId: string);
+export async function retryTranscription(entryId: string);
 ```
 
 **File**: `src/lib/actions/summarize.ts`
-```typescript
-'use server'
 
-export async function summarizeTranscript(entryId: string)
-export async function regenerateSummary(entryId: string)
+```typescript
+"use server";
+
+export async function summarizeTranscript(entryId: string);
+export async function regenerateSummary(entryId: string);
 ```
 
 ### API Routes (for webhooks, external integrations)
 
 **File**: `src/app/api/auth/[...nextauth]/route.ts`
+
 - NextAuth.js handlers
 
 **Future**: `src/app/api/webhooks/inngest/route.ts`
+
 - Background job webhooks when scaling
 
 ---
@@ -396,26 +415,26 @@ export async function regenerateSummary(entryId: string)
 ```typescript
 // src/lib/services/ai/whisper.ts
 
-import OpenAI from 'openai'
-import { put } from '@vercel/blob'
+import OpenAI from "openai";
+import { put } from "@vercel/blob";
 
 export async function transcribeAudioFile(audioUrl: string) {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   // 1. Download audio from Vercel Blob
-  const audioResponse = await fetch(audioUrl)
-  const audioBlob = await audioResponse.blob()
+  const audioResponse = await fetch(audioUrl);
+  const audioBlob = await audioResponse.blob();
 
   // 2. Convert to File object for Whisper API
-  const file = new File([audioBlob], 'audio.mp3', { type: 'audio/mpeg' })
+  const file = new File([audioBlob], "audio.mp3", { type: "audio/mpeg" });
 
   // 3. Call Whisper API with timestamp_granularities
   const transcription = await openai.audio.transcriptions.create({
     file,
-    model: 'whisper-1',
-    response_format: 'verbose_json',
-    timestamp_granularities: ['segment']
-  })
+    model: "whisper-1",
+    response_format: "verbose_json",
+    timestamp_granularities: ["segment"],
+  });
 
   // 4. Parse response
   return {
@@ -425,9 +444,9 @@ export async function transcribeAudioFile(audioUrl: string) {
       text: seg.text,
       startTime: seg.start,
       endTime: seg.end,
-      sequenceNumber: idx
-    }))
-  }
+      sequenceNumber: idx,
+    })),
+  };
 }
 ```
 
@@ -436,13 +455,13 @@ export async function transcribeAudioFile(audioUrl: string) {
 ```typescript
 // src/lib/services/ai/summarization.ts
 
-import OpenAI from 'openai'
+import OpenAI from "openai";
 
 export async function summarizeTranscript(
   fullText: string,
   segments: Array<{ text: string; startTime: number }>
 ) {
-  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+  const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
 
   // 1. Build prompt with instructions
   const prompt = `
@@ -451,57 +470,61 @@ You are an expert at summarizing transcripts. Given the following timestamped tr
 2. For each bullet point, include the most relevant timestamp in the format [MM:SS]
 
 Transcript:
-${segments.map(s => `[${formatTime(s.startTime)}] ${s.text}`).join('\n')}
+${segments.map((s) => `[${formatTime(s.startTime)}] ${s.text}`).join("\n")}
 
 Output format:
 - [00:30] Summary point 1
 - [02:15] Summary point 2
 ...
-  `.trim()
+  `.trim();
 
   // 2. Call GPT-3.5-turbo
   const completion = await openai.chat.completions.create({
-    model: 'gpt-3.5-turbo',
+    model: "gpt-3.5-turbo",
     messages: [
-      { role: 'system', content: 'You are a helpful assistant that summarizes audio transcripts.' },
-      { role: 'user', content: prompt }
+      {
+        role: "system",
+        content:
+          "You are a helpful assistant that summarizes audio transcripts.",
+      },
+      { role: "user", content: prompt },
     ],
     temperature: 0.7,
-    max_tokens: 500
-  })
+    max_tokens: 500,
+  });
 
   // 3. Parse response and extract timestamps
-  const summaryText = completion.choices[0].message.content
-  const summaryPoints = parseSummaryWithTimestamps(summaryText)
+  const summaryText = completion.choices[0].message.content;
+  const summaryPoints = parseSummaryWithTimestamps(summaryText);
 
   return {
     content: summaryText,
-    model: 'gpt-3.5-turbo',
-    timestampedPoints: summaryPoints
-  }
+    model: "gpt-3.5-turbo",
+    timestampedPoints: summaryPoints,
+  };
 }
 
 function parseSummaryWithTimestamps(text: string) {
   // Parse [MM:SS] patterns and extract text
-  const regex = /\[(\d{2}):(\d{2})\]\s*(.+?)(?=\n|$)/g
-  const points = []
-  let match
-  let sequence = 0
+  const regex = /\[(\d{2}):(\d{2})\]\s*(.+?)(?=\n|$)/g;
+  const points = [];
+  let match;
+  let sequence = 0;
 
   while ((match = regex.exec(text)) !== null) {
-    const minutes = parseInt(match[1])
-    const seconds = parseInt(match[2])
-    const timestamp = minutes * 60 + seconds
-    const text = match[3].trim()
+    const minutes = parseInt(match[1]);
+    const seconds = parseInt(match[2]);
+    const timestamp = minutes * 60 + seconds;
+    const text = match[3].trim();
 
     points.push({
       text,
       timestamp,
-      sequenceNumber: sequence++
-    })
+      sequenceNumber: sequence++,
+    });
   }
 
-  return points
+  return points;
 }
 ```
 
@@ -513,83 +536,87 @@ function parseSummaryWithTimestamps(text: string) {
 export async function processAudioEntry(entryId: string) {
   try {
     // 1. Update status to processing
-    await db.update(entries)
-      .set({ status: 'processing' })
-      .where(eq(entries.id, entryId))
+    await db
+      .update(entries)
+      .set({ status: "processing" })
+      .where(eq(entries.id, entryId));
 
     // 2. Get entry with audio URL
     const entry = await db.query.entries.findFirst({
-      where: eq(entries.id, entryId)
-    })
+      where: eq(entries.id, entryId),
+    });
 
-    if (!entry) throw new Error('Entry not found')
+    if (!entry) throw new Error("Entry not found");
 
     // 3. Transcribe audio
-    const transcriptionResult = await transcribeAudioFile(entry.audioUrl)
+    const transcriptionResult = await transcribeAudioFile(entry.audioUrl);
 
     // 4. Save transcript and segments to database
-    const [transcript] = await db.insert(transcripts)
+    const [transcript] = await db
+      .insert(transcripts)
       .values({
         entryId,
         fullText: transcriptionResult.fullText,
         language: transcriptionResult.language,
-        wordCount: transcriptionResult.fullText.split(' ').length
+        wordCount: transcriptionResult.fullText.split(" ").length,
       })
-      .returning()
+      .returning();
 
-    await db.insert(transcriptSegments)
-      .values(
-        transcriptionResult.segments.map(seg => ({
-          ...seg,
-          transcriptId: transcript.id
-        }))
-      )
+    await db.insert(transcriptSegments).values(
+      transcriptionResult.segments.map((seg) => ({
+        ...seg,
+        transcriptId: transcript.id,
+      }))
+    );
 
     // 5. Summarize transcript
     const summaryResult = await summarizeTranscript(
       transcriptionResult.fullText,
       transcriptionResult.segments
-    )
+    );
 
     // 6. Save summary and timestamp references
-    const [summary] = await db.insert(summaries)
+    const [summary] = await db
+      .insert(summaries)
       .values({
         entryId,
         content: summaryResult.content,
-        model: summaryResult.model
+        model: summaryResult.model,
       })
-      .returning()
+      .returning();
 
     if (summaryResult.timestampedPoints.length > 0) {
-      await db.insert(summaryTimestamps)
-        .values(
-          summaryResult.timestampedPoints.map(point => ({
-            ...point,
-            summaryId: summary.id
-          }))
-        )
+      await db.insert(summaryTimestamps).values(
+        summaryResult.timestampedPoints.map((point) => ({
+          ...point,
+          summaryId: summary.id,
+        }))
+      );
     }
 
     // 7. Update entry status to completed
-    await db.update(entries)
+    await db
+      .update(entries)
       .set({
-        status: 'completed',
-        audioDuration: transcriptionResult.segments[transcriptionResult.segments.length - 1]?.endTime
+        status: "completed",
+        audioDuration:
+          transcriptionResult.segments[transcriptionResult.segments.length - 1]
+            ?.endTime,
       })
-      .where(eq(entries.id, entryId))
+      .where(eq(entries.id, entryId));
 
-    return { success: true }
-
+    return { success: true };
   } catch (error) {
     // Handle errors
-    await db.update(entries)
+    await db
+      .update(entries)
       .set({
-        status: 'failed',
-        processingError: error.message
+        status: "failed",
+        processingError: error.message,
       })
-      .where(eq(entries.id, entryId))
+      .where(eq(entries.id, entryId));
 
-    throw error
+    throw error;
   }
 }
 ```
@@ -607,6 +634,7 @@ export async function processAudioEntry(entryId: string) {
 ### Implementation Approach
 
 **File**: `src/components/audio/AudioPlayer.tsx`
+
 ```typescript
 'use client'
 
@@ -665,22 +693,23 @@ export function AudioPlayer({ audioUrl, onTimeUpdate, seekToTime }: AudioPlayerP
 ```
 
 **File**: `src/hooks/use-audio-player.ts`
-```typescript
-'use client'
 
-import { create } from 'zustand'
+```typescript
+"use client";
+
+import { create } from "zustand";
 
 interface AudioPlayerState {
-  currentTime: number
-  isPlaying: boolean
-  duration: number
-  seekToTime: number | null
+  currentTime: number;
+  isPlaying: boolean;
+  duration: number;
+  seekToTime: number | null;
 
-  setCurrentTime: (time: number) => void
-  setIsPlaying: (playing: boolean) => void
-  setDuration: (duration: number) => void
-  seekTo: (time: number) => void
-  clearSeek: () => void
+  setCurrentTime: (time: number) => void;
+  setIsPlaying: (playing: boolean) => void;
+  setDuration: (duration: number) => void;
+  seekTo: (time: number) => void;
+  clearSeek: () => void;
 }
 
 export const useAudioPlayer = create<AudioPlayerState>((set) => ({
@@ -693,11 +722,12 @@ export const useAudioPlayer = create<AudioPlayerState>((set) => ({
   setIsPlaying: (playing) => set({ isPlaying: playing }),
   setDuration: (duration) => set({ duration }),
   seekTo: (time) => set({ seekToTime: time }),
-  clearSeek: () => set({ seekToTime: null })
-}))
+  clearSeek: () => set({ seekToTime: null }),
+}));
 ```
 
 **File**: `src/components/entry/TranscriptView.tsx`
+
 ```typescript
 'use client'
 
@@ -742,6 +772,7 @@ export function TranscriptView({ segments }: TranscriptViewProps) {
 ```
 
 **File**: `src/components/entry/TimestampLink.tsx`
+
 ```typescript
 'use client'
 
@@ -782,43 +813,46 @@ export function TimestampLink({ timestamp, className }: TimestampLinkProps) {
 ### Vercel Blob Integration
 
 **Upload Flow:**
+
 ```typescript
 // src/lib/services/storage/blob-storage.ts
 
-import { put, del } from '@vercel/blob'
+import { put, del } from "@vercel/blob";
 
 export async function uploadAudio(file: File, userId: string) {
   // Generate unique filename
-  const timestamp = Date.now()
-  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
-  const filename = `audio/${userId}/${timestamp}-${sanitizedName}`
+  const timestamp = Date.now();
+  const sanitizedName = file.name.replace(/[^a-zA-Z0-9.-]/g, "_");
+  const filename = `audio/${userId}/${timestamp}-${sanitizedName}`;
 
   // Upload to Vercel Blob
   const blob = await put(filename, file, {
-    access: 'public',
-    addRandomSuffix: true
-  })
+    access: "public",
+    addRandomSuffix: true,
+  });
 
   return {
     url: blob.url,
     fileName: file.name,
     fileSize: file.size,
-    mimeType: file.type
-  }
+    mimeType: file.type,
+  };
 }
 
 export async function deleteAudio(url: string) {
-  await del(url)
+  await del(url);
 }
 ```
 
 **Security Considerations:**
+
 - Files are publicly accessible by URL (needed for OpenAI Whisper API)
 - URLs contain random suffixes (security through obscurity)
 - Database stores userId for authorization checks
 - Soft delete entries first, hard delete blobs in cleanup job
 
 **Storage Limits:**
+
 - Vercel Blob free tier: 1GB storage, 100GB bandwidth/month
 - Max file size: 500MB per file (Vercel limit)
 - Client-side validation: max 100MB for better UX
@@ -831,55 +865,59 @@ export async function deleteAudio(url: string) {
 ### Authentication Flow (NextAuth.js v5)
 
 **File**: `src/lib/auth/auth.ts`
+
 ```typescript
-import NextAuth from 'next-auth'
-import Credentials from 'next-auth/providers/credentials'
-import { DrizzleAdapter } from '@auth/drizzle-adapter'
-import { db } from '@/lib/db'
-import bcrypt from 'bcryptjs'
+import NextAuth from "next-auth";
+import Credentials from "next-auth/providers/credentials";
+import { DrizzleAdapter } from "@auth/drizzle-adapter";
+import { db } from "@/lib/db";
+import bcrypt from "bcryptjs";
 
 export const { handlers, signIn, signOut, auth } = NextAuth({
   adapter: DrizzleAdapter(db),
-  session: { strategy: 'jwt' },
+  session: { strategy: "jwt" },
   providers: [
     Credentials({
       credentials: {
-        email: { label: 'Email', type: 'email' },
-        password: { label: 'Password', type: 'password' }
+        email: { label: "Email", type: "email" },
+        password: { label: "Password", type: "password" },
       },
       authorize: async (credentials) => {
         // Validate and return user
         const user = await db.query.users.findFirst({
-          where: eq(users.email, credentials.email)
-        })
+          where: eq(users.email, credentials.email),
+        });
 
-        if (!user || !await bcrypt.compare(credentials.password, user.password)) {
-          return null
+        if (
+          !user ||
+          !(await bcrypt.compare(credentials.password, user.password))
+        ) {
+          return null;
         }
 
-        return { id: user.id, email: user.email, name: user.name }
-      }
-    })
+        return { id: user.id, email: user.email, name: user.name };
+      },
+    }),
   ],
   pages: {
-    signIn: '/login',
-    error: '/login'
+    signIn: "/login",
+    error: "/login",
   },
   callbacks: {
     jwt({ token, user }) {
       if (user) {
-        token.id = user.id
+        token.id = user.id;
       }
-      return token
+      return token;
     },
     session({ session, token }) {
       if (token && session.user) {
-        session.user.id = token.id
+        session.user.id = token.id;
       }
-      return session
-    }
-  }
-})
+      return session;
+    },
+  },
+});
 ```
 
 ### Security Measures
@@ -890,7 +928,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
    - Session tokens in httpOnly cookies
 
 2. **File Upload Security**
-   - File type validation (audio/* only)
+   - File type validation (audio/\* only)
    - File size limits (100MB client, 500MB server)
    - Virus scanning (future with background jobs)
 
@@ -921,6 +959,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - **Hosting**: Vercel serverless functions
 
 **Limitations:**
+
 - Vercel function timeout: 60s (hobby), 300s (pro)
 - Long audio files (>10min) may timeout
 - No retry mechanism for failed processing
@@ -961,6 +1000,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### MVP Features (Phase 1 - Launch)
 
 ✅ **Must Have:**
+
 - User registration & authentication
 - Audio file upload (up to 100MB)
 - In-browser audio recording
@@ -972,6 +1012,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - Basic entry management (view, delete)
 
 ❌ **Not in MVP:**
+
 - Background job processing
 - OAuth providers (Google, GitHub)
 - Team/sharing features
@@ -986,6 +1027,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Future Enhancements (Post-MVP)
 
 **Phase 2: Enhanced Experience**
+
 - Background processing for large files
 - Speaker diarization (identify different speakers)
 - Real-time transcription as recording
@@ -994,12 +1036,14 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - Multiple language support UI
 
 **Phase 3: Collaboration**
+
 - Share entries with links
 - Team workspaces
 - Comments on transcript segments
 - Collaborative editing of summaries
 
 **Phase 4: Advanced Features**
+
 - Custom AI prompts for summaries
 - Keyword extraction and tagging
 - Automatic chapter detection
@@ -1007,6 +1051,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - API for third-party integrations
 
 **Phase 5: Monetization**
+
 - Free tier: 10 hours/month
 - Pro tier: unlimited + advanced features
 - Stripe integration
@@ -1019,6 +1064,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 1: Foundation (Week 1)
 
 **Sprint 1.1: Project Setup**
+
 - [ ] Initialize Next.js project with TypeScript
 - [ ] Install and configure dependencies
 - [ ] Set up Tailwind CSS and shadcn/ui
@@ -1026,6 +1072,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Set up Git and initial commit
 
 **Sprint 1.2: Database & Auth**
+
 - [ ] Set up Neon PostgreSQL database
 - [ ] Install and configure Drizzle ORM
 - [ ] Create database schema (users, entries, transcripts, summaries)
@@ -1037,6 +1084,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 2: Core Audio Features (Week 2)
 
 **Sprint 2.1: Audio Upload**
+
 - [ ] Create upload page UI
 - [ ] Implement file validation (type, size)
 - [ ] Integrate Vercel Blob storage
@@ -1044,6 +1092,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Show upload progress indicator
 
 **Sprint 2.2: Audio Recording**
+
 - [ ] Create recording page UI
 - [ ] Implement MediaRecorder API integration
 - [ ] Add recording controls (start, stop, pause)
@@ -1053,6 +1102,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 3: AI Integration (Week 3)
 
 **Sprint 3.1: Transcription**
+
 - [ ] Set up OpenAI API client
 - [ ] Implement Whisper API integration
 - [ ] Create transcription service
@@ -1060,6 +1110,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Add error handling and retry logic
 
 **Sprint 3.2: Summarization**
+
 - [ ] Implement GPT-3.5-turbo summarization
 - [ ] Parse timestamps from summary
 - [ ] Save summary and timestamp references
@@ -1069,6 +1120,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 4: Audio Player & Synchronization (Week 4)
 
 **Sprint 4.1: Player Implementation**
+
 - [ ] Integrate WaveSurfer.js
 - [ ] Create AudioPlayer component
 - [ ] Implement playback controls (play, pause, seek)
@@ -1076,6 +1128,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Create Zustand store for player state
 
 **Sprint 4.2: Timestamp Sync**
+
 - [ ] Create TranscriptView component with segments
 - [ ] Implement click-to-seek functionality
 - [ ] Highlight active segment during playback
@@ -1085,6 +1138,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 5: Dashboard & Entry Management (Week 5)
 
 **Sprint 5.1: Dashboard**
+
 - [ ] Create dashboard page layout
 - [ ] Implement entry list with cards
 - [ ] Add sorting (by date, title)
@@ -1092,6 +1146,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Show entry metadata (duration, date, status)
 
 **Sprint 5.2: Entry Details Page**
+
 - [ ] Create entry detail page layout
 - [ ] Display audio player at top
 - [ ] Show transcript below with segments
@@ -1102,6 +1157,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 6: Polish & Optimization (Week 6)
 
 **Sprint 6.1: UI/UX Polish**
+
 - [ ] Add loading states and skeletons
 - [ ] Implement error boundaries
 - [ ] Add toast notifications
@@ -1110,6 +1166,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Optimize for accessibility (ARIA labels)
 
 **Sprint 6.2: Testing & Bug Fixes**
+
 - [ ] Manual testing of all flows
 - [ ] Fix identified bugs
 - [ ] Test with different audio formats
@@ -1119,6 +1176,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 ### Phase 7: Deployment (Week 7)
 
 **Sprint 7.1: Pre-deployment**
+
 - [ ] Review environment variables
 - [ ] Set up production database (Neon)
 - [ ] Configure production Vercel Blob
@@ -1126,6 +1184,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth({
 - [ ] Set up error monitoring (Sentry)
 
 **Sprint 7.2: Launch**
+
 - [ ] Deploy to Vercel
 - [ ] Test production environment
 - [ ] Monitor for errors
